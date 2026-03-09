@@ -9,10 +9,12 @@ To improve the learning experience, CheatzCSE includes several personal study to
 The system encourages collaboration through community features such as lecture comments, resource ratings, and peer summaries. Students can discuss lecture topics, ask questions, and contribute summaries to help others understand complex concepts.
 CheatzCSE also provides content discovery features such as Related Resources, Most Popular This Week, and Recently Added sections. These features help students discover useful materials quickly, especially during exam preparation periods.
 Overall, CheatzCSE aims to simplify academic resource management and create a collaborative learning environment for BRAC University CSE students.
+
 #SRS Document Link
 https://docs.google.com/document/d/10IPfmSZEw9JEpEvPXQBbwZzK7EoktRcksMC-0fXISsU/edit?usp=drivesdk
 
 #Tech Stack Description
+
 Vercel serverless with mongoDB
 
 Group Members:
