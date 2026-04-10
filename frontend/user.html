@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Progress</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans" x-data="userApp()" x-init="init()">
+    <nav class="bg-white border-b border-gray-200 p-4">
+        <a href="/" class="text-indigo-600 hover:underline">&larr; Home</a>
+    </nav>
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold mb-6">My Learning Dashboard</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded shadow">
+                <h2 class="font-bold text-lg mb-3 text-green-600">✅ Completed Lectures</h2>
+                <ul class="space-y-2">
+                    <template x-for="p in progress" :key="p.lecture_id">
+                        <li class="flex justify-between items-center border-b pb-2">
+                            <span x-text="p.topic"></span>
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Watched</span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <div class="bg-white p-5 rounded shadow">
+                <h2 class="font-bold text-lg mb-3 text-yellow-600">⭐ Bookmarked</h2>
+                <ul class="space-y-2">
+                    <template x-for="b in bookmarks" :key="b.lecture_id">
+                        <li><a :href="`/lecture.html?id=${b.lecture_id}`" class="text-indigo-600 hover:underline" x-text="b.topic"></a></li>
+                    </template>
+                </ul>
+            </div>
+        </div>
+    </main>
+    <script type="module">
+        import { fetchAPI } from './assets/js/api.js';
+        window.userApp = () => ({
+            progress: [],
+            bookmarks: [],
+            async init() {
+                this.progress = await fetchAPI('/progress').catch(()=>[]);
+                this.bookmarks = await fetchAPI('/bookmarks').catch(()=>[]);
+            }
+        });
+    </script>
+</body>
+</html>

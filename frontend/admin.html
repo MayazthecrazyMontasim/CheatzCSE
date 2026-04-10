@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans" x-data="adminApp()" x-init="init()">
+    <nav class="bg-gray-900 text-white p-4">
+        <div class="max-w-7xl mx-auto flex justify-between">
+            <span class="font-bold">🛠️ Admin Dashboard</span>
+            <a href="/" class="text-gray-300 hover:text-white">Exit</a>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Create Lecture -->
+        <div class="bg-white p-6 rounded shadow">
+            <h2 class="text-xl font-bold mb-4">Add Lecture</h2>
+            <form @submit.prevent="createLecture()" class="space-y-3">
+                <input x-model="forms.lecture.course_id" placeholder="Course ID" class="w-full p-2 border rounded" required>
+                <input x-model="forms.lecture.youtube_id" placeholder="YouTube ID (e.g. dQw4w9WgXcQ)" class="w-full p-2 border rounded" required>
+                <input x-model="forms.lecture.week" type="number" placeholder="Week Number" class="w-full p-2 border rounded" required>
+                <input x-model="forms.lecture.topic" placeholder="Topic Title" class="w-full p-2 border rounded" required>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Create Lecture</button>
+            </form>
+        </div>
+
+        <!-- Upload Resource -->
+        <div class="bg-white p-6 rounded shadow">
+            <h2 class="text-xl font-bold mb-4">Upload PDF/Slide</h2>
+            <form @submit.prevent="uploadResource()" class="space-y-3">
+                <input x-model="forms.resource.lecture_id" placeholder="Lecture ID" class="w-full p-2 border rounded" required>
+                <input type="file" @change="forms.resource.file = $event.target.files[0]" class="w-full p-2 border rounded" required>
+                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">Upload to R2</button>
+            </form>
+        </div>
+
+        <!-- Post Announcement -->
+        <div class="bg-white p-6 rounded shadow md:col-span-2">
+            <h2 class="text-xl font-bold mb-4">Post Announcement</h2>
+            <form @submit.prevent="postAnnouncement()" class="space-y-3">
+                <input x-model="forms.ann.title" placeholder="Title" class="w-full p-2 border rounded" required>
+                <textarea x-model="forms.ann.content" placeholder="Content" class="w-full p-2 border rounded" rows="2" required></textarea>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Post</button>
+            </form>
+        </div>
+    </main>
+
+    <script type="module">
+        import { fetchAPI } from './assets/js/api.js';
+        window.adminApp = () => ({
+            forms: {
+                lecture: { course_id: '', youtube_id: '', week: '', topic: '' },
+                resource: { lecture_id: '', file: null },
+                ann: { title: '', content: '' }
+            },
+            async init() {
+                try {
+                    const u = await fetchAPI('/auth/me');
+                    if(u.role !== 'admin') window.location.href = '/';
+                } catch(e) { window.location.href = '/'; }
+            },
+            async createLecture() {
+                await fetchAPI('/admin/lecture', { method: 'POST', body: JSON.stringify(this.forms.lecture) });
+                alert('Lecture created');
+                this.forms.lecture = { course_id: '', youtube_id: '', week: '', topic: '' };
+            },
+            async uploadResource() {
+                const fd = new FormData();
+                fd.append('file', this.forms.resource.file);
+                fd.append('lecture_id', this.forms.resource.lecture_id);
+                await fetchAPI('/admin/upload', { method: 'POST', body: fd }); // Note: api.js needs to handle FormData (remove Content-Type header)
+                alert('Uploaded');
+            },
+            async postAnnouncement() {
+                await fetchAPI('/admin/announcement', { method: 'POST', body: JSON.stringify(this.forms.ann) });
+                alert('Posted');
+                this.forms.ann = { title: '', content: '' };
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans" x-data="courseApp()" x-init="init()">
+    
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <a href="/" class="text-indigo-600 hover:underline">&larr; Back to Home</a>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h1 class="text-3xl font-bold text-gray-900" x-text="course.title"></h1>
+            <p class="text-gray-600 mt-2" x-text="course.description"></p>
+        </div>
+
+        <h2 class="text-xl font-bold mb-4">Lectures</h2>
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <template x-for="lec in lectures" :key="lec.id">
+                <a :href="`/lecture.html?id=${lec.id}`" class="block p-4 border-b border-gray-100 hover:bg-gray-50 flex justify-between items-center group">
+                    <div>
+                        <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded" x-text="`Week ${lec.week}`"></span>
+                        <span class="ml-3 font-medium text-gray-800 group-hover:text-indigo-600" x-text="lec.topic"></span>
+                    </div>
+                    <span class="text-gray-400 text-sm">Watch &rarr;</span>
+                </a>
+            </template>
+            <div x-show="lectures.length === 0" class="p-4 text-gray-500">No lectures added yet.</div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { fetchAPI } from './assets/js/api.js';
+        window.courseApp = () => ({
+            course: {},
+            lectures: [],
+            async init() {
+                const id = new URLSearchParams(location.search).get('id');
+                if(!id) return;
+                // Fetch course details (simplified: assuming we get it from lectures or separate endpoint)
+                // For now, we just fetch lectures and infer course info or fetch specific course API if added
+                this.lectures = await fetchAPI(`/lectures?course_id=${id}`);
+                if(this.lectures.length > 0) {
+                    // Hack to get course title since we didn't build a single-course endpoint in worker for brevity
+                    // In prod, add GET /api/courses/:id
+                    this.course = { title: 'Course Details', description: 'Select a lecture below.' }; 
+                }
+            }
+        });
+    </script>
+</body>
+</html>

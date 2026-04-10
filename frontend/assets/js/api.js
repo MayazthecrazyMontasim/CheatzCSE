@@ -1,0 +1,33 @@
+/**
+ * Centralized API Client
+ * Handles auth cookies, JSON parsing, and error throwing.
+ */
+const API_BASE = ''; // Empty because we rely on relative paths /api/* which Pages/Workers handle
+
+export async function fetchAPI(path, options = {}) {
+    const isFormData = options.body instanceof FormData;
+    
+    // Only set Content-Type if it's NOT FormData (browser sets boundary automatically)
+    const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
+    
+    try {
+        const res = await fetch(`${API_BASE}/api${path}`, {
+            ...options,
+            credentials: 'include', // CRITICAL: Sends session cookie to Worker
+            headers: { ...headers, ...options.headers }
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({ error: 'Network Error' }));
+            throw new Error(errData.error || `HTTP ${res.status}`);
+        }
+        
+        // Handle 204 No Content (e.g., successful delete/update without body)
+        if (res.status === 204) return null;
+        
+        return await res.json();
+    } catch (error) {
+        console.error(`API Error on ${path}:`, error);
+        throw error;
+    }
+}
