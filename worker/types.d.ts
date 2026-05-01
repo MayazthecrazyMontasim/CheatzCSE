@@ -9,7 +9,7 @@ export interface Env {
   CACHE: KVNamespace;
 
   // R2 Bucket
-  BUCKET: R2Bucket;
+ // BUCKET: R2Bucket;
 
   // Durable Objects
   COMMENTS_DO: DurableObjectNamespace;

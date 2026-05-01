@@ -18,7 +18,11 @@ id = "d3215b71894b474196cc457657823e6f"
 [[kv_namespaces]]
 binding = "CACHE"
 id = "53af4bce3ed4435e948a3acc5c49fb87"
- 
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "edu-platform-assets"
+
 [[durable_objects.bindings]]
 name = "COMMENTS_DO"
 class_name = "LectureCommentsDO"
@@ -26,3 +30,9 @@ class_name = "LectureCommentsDO"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = [ "LectureCommentsDO" ]
+
+
+
+
+
+const API_BASE = 'https://edu-platform.syedadnanrahman071.workers.dev';

@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edge Academy</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Load Alpine BEFORE inline scripts so x-data works -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans" x-data="homeApp()" x-init="init()">
 
@@ -17,17 +18,21 @@
                     <a href="/" class="text-xl font-bold text-indigo-600">Edge Academy</a>
                     <div class="hidden md:flex ml-10 space-x-8">
                         <a href="/search.html" class="text-gray-500 hover:text-gray-900">Search</a>
+                        <!-- Show My Progress only if user is logged in -->
                         <a href="/user.html" x-show="user" class="text-gray-500 hover:text-gray-900">My Progress</a>
-                        <a href="/admin.html" x-show="user?.role === 'admin'" class="text-red-500 hover:text-red-700">Admin</a>
+                        <!-- Show Admin only if user role is admin -->
+                        <a href="/admin.html" x-show="user && user.role === 'admin'" class="text-red-500 hover:text-red-700">Admin</a>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
+                    <!-- Show Login button if NOT logged in -->
                     <template x-if="!user">
                         <button @click="showLogin = true" class="text-indigo-600 hover:text-indigo-500 font-medium">Log in</button>
                     </template>
+                    <!-- Show user info + Logout if logged in -->
                     <template x-if="user">
                         <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-600" x-text="user.email"></span>
+                            <span class="text-sm text-gray-600" x-text="user.email || 'User'"></span>
                             <button @click="logout()" class="text-sm text-red-500 hover:text-red-700">Logout</button>
                         </div>
                     </template>
@@ -49,7 +54,7 @@
         </div>
 
         <!-- Announcements -->
-        <div x-show="announcements.length > 0" class="mb-8 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+        <div x-show="announcements && announcements.length > 0" class="mb-8 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
             <h3 class="font-bold text-blue-800 mb-2">📢 Latest Announcements</h3>
             <template x-for="a in announcements" :key="a.id">
                 <div class="mb-2 last:mb-0">
@@ -72,10 +77,10 @@
                             <a :href="`/lecture.html?id=${lec.id}`" class="block bg-white p-4 rounded-lg shadow hover:shadow-md transition border border-gray-100">
                                 <div class="text-xs text-indigo-600 font-semibold uppercase tracking-wide mb-1" x-text="`Week ${lec.week}`"></div>
                                 <h3 class="font-bold text-gray-800 truncate" x-text="lec.topic"></h3>
-                                <p class="text-sm text-gray-500 mt-1 truncate" x-text="getCourseTitle(lecs_meta[lec.course_id])"></p>
+                                <p class="text-sm text-gray-500 mt-1 truncate" x-text="getCourseTitle(lec.course_id)"></p>
                             </a>
                         </template>
-                        <div x-show="popular.length === 0" class="text-gray-400 italic">No views yet this week.</div>
+                        <div x-show="!popular || popular.length === 0" class="text-gray-400 italic">No views yet this week.</div>
                     </div>
                 </section>
 
@@ -88,10 +93,11 @@
                                 <div class="h-10 w-10 bg-red-100 rounded flex items-center justify-center text-red-600 mr-3">▶</div>
                                 <div>
                                     <h4 class="font-medium text-gray-900" x-text="lec.topic"></h4>
-                                    <p class="text-xs text-gray-500" x-text="new Date(lec.created_at).toLocaleDateString()"></p>
+                                    <p class="text-xs text-gray-500" x-text="lec.created_at ? new Date(lec.created_at).toLocaleDateString() : ''"></p>
                                 </div>
                             </a>
                         </template>
+                        <div x-show="!recent || recent.length === 0" class="text-gray-400 italic">No recent lectures.</div>
                     </div>
                 </section>
             </div>
@@ -106,6 +112,7 @@
                             <span class="text-xs text-gray-400 block" x-text="getSemesterName(course.semester_id)"></span>
                         </a>
                     </template>
+                    <div x-show="!courses || courses.length === 0" class="text-gray-400 italic">No courses available.</div>
                 </div>
             </aside>
         </div>
@@ -126,9 +133,36 @@
         </div>
     </div>
 
-    <script type="module">
-        import { fetchAPI } from './assets/js/api.js';
+    <!-- Inline script: Define homeApp BEFORE Alpine initializes -->
+    <script>
+        // Define fetchAPI inline to avoid import path issues
+        const API_BASE = ''; // Use relative paths - Pages/Workers handle routing
         
+        async function fetchAPI(path, options = {}) {
+            const isFormData = options.body instanceof FormData;
+            const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
+            
+            try {
+                const res = await fetch(`${API_BASE}/api${path}`, {
+                    ...options,
+                    credentials: 'include', // Send session cookie
+                    headers: { ...headers, ...options.headers }
+                });
+                
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: 'Network Error' }));
+                    throw new Error(err.error || `HTTP ${res.status}`);
+                }
+                
+                if (res.status === 204) return null;
+                return await res.json();
+            } catch (error) {
+                console.error(`API Error on ${path}:`, error);
+                throw error;
+            }
+        }
+        
+        // Define homeApp on window BEFORE Alpine loads
         window.homeApp = () => ({
             user: null,
             showLogin: false,
@@ -138,57 +172,102 @@
             popular: [],
             recent: [],
             announcements: [],
-            lecs_meta: {}, // Cache for course titles
+            courseMap: {}, // Cache: course_id -> course title
 
             async init() {
-                // Load User
-                try { this.user = await fetchAPI('/auth/me'); } catch(e) {}
+                console.log('homeApp init() running');
                 
-                // Load Content
-                const [courses, pop, rec, ann] = await Promise.all([
-                    fetchAPI('/courses'),
-                    fetchAPI('/analytics/popular').catch(() => []),
-                    fetchAPI('/analytics/recent').catch(() => []),
-                    fetchAPI('/admin/announcements').catch(() => [])
-                ]);
+                // Load User (silently fail if not logged in)
+                try {
+                    this.user = await fetchAPI('/auth/me');
+                    console.log('User loaded:', this.user);
+                } catch (e) {
+                    console.log('Not logged in (expected for guests)');
+                    this.user = null;
+                }
+                
+                // Load Content in parallel
+                try {
+                    const [courses, pop, rec, ann] = await Promise.all([
+                        fetchAPI('/courses').catch(() => []),
+                        fetchAPI('/analytics/popular').catch(() => []),
+                        fetchAPI('/analytics/recent').catch(() => []),
+                        fetchAPI('/admin/announcements').catch(() => [])
+                    ]);
 
-                this.courses = courses;
-                this.popular = pop;
-                this.recent = rec;
-                this.announcements = ann;
+                    this.courses = courses || [];
+                    this.popular = pop || [];
+                    this.recent = rec || [];
+                    this.announcements = ann || [];
 
-                // Map course IDs to titles for display
-                courses.forEach(c => {
-                    this.lecs_meta[c.id] = c.title;
-                    this.semesters[c.semester_id] = c.semester_id; // Simplified for demo
-                });
+                    // Build course lookup map
+                    (this.courses || []).forEach(c => {
+                        if (c && c.id) {
+                            this.courseMap[c.id] = c.title;
+                            this.semesters[c.semester_id] = c.semester_id;
+                        }
+                    });
+                    
+                    console.log('Content loaded:', { 
+                        courses: this.courses.length, 
+                        popular: this.popular.length,
+                        recent: this.recent.length 
+                    });
+                } catch (e) {
+                    console.error('Failed to load content:', e);
+                }
             },
 
-            getCourseTitle(id) { return this.lecs_meta[id] || 'Unknown Course'; },
-            getSemesterName(id) { return `Semester ${id}`; }, // Simplified
+            getCourseTitle(courseId) {
+                return this.courseMap[courseId] || 'Unknown Course';
+            },
+            
+            getSemesterName(semesterId) {
+                return semesterId ? `Semester ${semesterId}` : '';
+            },
 
             async login() {
                 try {
-                    await fetchAPI('/auth/login', { method: 'POST', body: JSON.stringify(this.loginForm) });
+                    await fetchAPI('/auth/login', { 
+                        method: 'POST', 
+                        body: JSON.stringify(this.loginForm) 
+                    });
+                    // Refresh user state after login
                     this.user = await fetchAPI('/auth/me');
                     this.showLogin = false;
-                } catch (e) { alert('Login failed'); }
-            },
-            async register() {
-                // Simple toggle for demo, ideally a separate form
-                const email = prompt("Enter email to register:");
-                const pass = prompt("Enter password:");
-                if(email && pass) {
-                    try {
-                        await fetchAPI('/auth/register', { method: 'POST', body: JSON.stringify({ email, password: pass }) });
-                        alert('Registered! Please log in.');
-                    } catch(e) { alert('Registration failed'); }
+                    this.loginForm = { email: '', password: '' };
+                    console.log('Login successful');
+                } catch (e) { 
+                    alert('Login failed: ' + e.message);
+                    console.error('Login error:', e);
                 }
             },
+            
+            async register() {
+                const email = prompt("Enter email to register:");
+                const pass = prompt("Enter password:");
+                if (email && pass) {
+                    try {
+                        await fetchAPI('/auth/register', { 
+                            method: 'POST', 
+                            body: JSON.stringify({ email, password: pass }) 
+                        });
+                        alert('Registered! Please log in.');
+                    } catch(e) { 
+                        alert('Registration failed: ' + e.message); 
+                    }
+                }
+            },
+            
             async logout() {
-                // Clear cookie via backend or just reload
-                document.cookie = "session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-                window.location.reload();
+                try {
+                    // Call backend to clear session
+                    await fetchAPI('/auth/logout', { method: 'POST' }).catch(() => {});
+                } finally {
+                    // Clear local state and reload
+                    this.user = null;
+                    window.location.reload();
+                }
             }
         });
     </script>

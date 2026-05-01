@@ -1,0 +1,415 @@
+# test-api.ps1 - Complete API Test Suite for Edge Educational Platform
+# Usage: .\test-api.ps1 -WorkerUrl "https://edu-platform.YOUR-ACCOUNT.workers.dev"
+
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$WorkerUrl
+)
+
+# Configuration
+$API_BASE = $WorkerUrl
+$TEST_EMAIL = "test-$(Get-Random)@example.com"
+$TEST_PASSWORD = "TestPass123!"
+$ADMIN_EMAIL = "admin-$(Get-Random)@example.com"
+$ADMIN_PASSWORD = "AdminPass123!"
+
+# Colors for output
+$Success = "Green"
+$Error = "Red"
+$Info = "Cyan"
+$Warning = "Yellow"
+
+function Write-TestHeader {
+    param([string]$Title)
+    Write-Host "`n========================================" -ForegroundColor $Info
+    Write-Host "  $Title" -ForegroundColor $Info
+    Write-Host "========================================`n" -ForegroundColor $Info
+}
+
+function Write-TestResult {
+    param(
+        [string]$TestName,
+        [bool]$Passed,
+        [string]$Message = ""
+    )
+    $symbol = if ($Passed) { "✅" } else { "❌" }
+    $color = if ($Passed) { $Success } else { $Error }
+    Write-Host "  $symbol $TestName" -ForegroundColor $color
+    if ($Message) { Write-Host "     $Message" -ForegroundColor Gray }
+}
+
+function Invoke-TestRequest {
+    param(
+        [string]$Method,
+        [string]$Path,
+        [object]$Body = $null,
+        [hashtable]$Headers = @{},
+        [string]$CookieFile = $null
+    )
+    
+    $url = "$API_BASE/api$Path"
+    $args = @("-s", "-X", $Method, $url)
+    
+    if ($Headers.Count -gt 0) {
+        foreach ($kvp in $Headers.GetEnumerator()) {
+            $args += "-H", "$($kvp.Key): $($kvp.Value)"
+        }
+    }
+    
+    if ($Body) {
+        if ($Body -is [string]) {
+            $args += "-d", $Body
+        } else {
+            $json = $Body | ConvertTo-Json -Depth 10 -Compress
+            $args += "-H", "Content-Type: application/json", "-d", $json
+        }
+    }
+    
+    if ($CookieFile) {
+        $args += "-b", $CookieFile, "-c", $CookieFile
+    }
+    
+    try {
+        $response = curl.exe @args 2>$null
+        $statusCode = $LASTEXITCODE
+        
+        # Parse response
+        if ($response -and $response.StartsWith("{")) {
+            return $response | ConvertFrom-Json -ErrorAction SilentlyContinue
+        }
+        return @{ raw = $response; statusCode = $statusCode }
+    } catch {
+        return @{ error = $_.Exception.Message }
+    }
+}
+
+# Track test results
+$testResults = @{ passed = 0; failed = 0 }
+
+# ============================================================================
+# 📦 AUTHENTICATION TESTS
+# ============================================================================
+Write-TestHeader "🔐 Authentication Tests"
+
+# Test 1: Register new user
+Write-Host "  Testing POST /auth/register..." -ForegroundColor Gray
+$registerResult = Invoke-TestRequest -Method POST -Path "/auth/register" -Body @{
+    email = $TEST_EMAIL
+    password = $TEST_PASSWORD
+}
+$passed = $registerResult -and $registerResult.ok -eq $true
+Write-TestResult "Register new user" $passed ($registerResult | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 2: Register duplicate email (should fail)
+Write-Host "  Testing duplicate registration..." -ForegroundColor Gray
+$duplicateResult = Invoke-TestRequest -Method POST -Path "/auth/register" -Body @{
+    email = $TEST_EMAIL
+    password = "AnotherPass123!"
+}
+$passed = $duplicateResult -and $duplicateResult.error -and $duplicateResult.error -like "*already*"
+Write-TestResult "Reject duplicate email" $passed ($duplicateResult | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 3: Login with valid credentials
+$cookieFile = "$env:TEMP\test-cookies-$(Get-Random).txt"
+Write-Host "  Testing POST /auth/login..." -ForegroundColor Gray
+$loginResult = Invoke-TestRequest -Method POST -Path "/auth/login" -Body @{
+    email = $TEST_EMAIL
+    password = $TEST_PASSWORD
+} -CookieFile $cookieFile
+$passed = $loginResult -and $loginResult.ok -eq $true
+Write-TestResult "Login with valid credentials" $passed ($loginResult | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 4: Login with invalid password (should fail)
+Write-Host "  Testing invalid password..." -ForegroundColor Gray
+$invalidLogin = Invoke-TestRequest -Method POST -Path "/auth/login" -Body @{
+    email = $TEST_EMAIL
+    password = "WrongPassword!"
+}
+$passed = $invalidLogin -and $invalidLogin.error -and $invalidLogin.error -like "*Invalid*"
+Write-TestResult "Reject invalid password" $passed ($invalidLogin | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 5: Get current user info
+Write-Host "  Testing GET /auth/me..." -ForegroundColor Gray
+$meResult = Invoke-TestRequest -Method GET -Path "/auth/me" -CookieFile $cookieFile
+$passed = $meResult -and $meResult.email -eq $TEST_EMAIL -and $meResult.role -in @("student", "admin")
+Write-TestResult "Get current user info" $passed ($meResult | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 6: Access protected endpoint without auth (should fail)
+Write-Host "  Testing unauthenticated access..." -ForegroundColor Gray
+$unauthResult = Invoke-TestRequest -Method GET -Path "/auth/me"
+$passed = $unauthResult -and $unauthResult.error -and $unauthResult.error -like "*Unauthenticated*"
+Write-TestResult "Reject unauthenticated access" $passed ($unauthResult | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 7: Logout
+Write-Host "  Testing POST /auth/logout..." -ForegroundColor Gray
+$logoutResult = Invoke-TestRequest -Method POST -Path "/auth/logout" -CookieFile $cookieFile
+$passed = $logoutResult -and $logoutResult.ok -eq $true
+Write-TestResult "Logout user" $passed ($logoutResult | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 8: Verify session cleared after logout
+Write-Host "  Testing session cleared after logout..." -ForegroundColor Gray
+$afterLogout = Invoke-TestRequest -Method GET -Path "/auth/me" -CookieFile $cookieFile
+$passed = $afterLogout -and $afterLogout.error -and $afterLogout.error -like "*Unauthenticated*"
+Write-TestResult "Session cleared after logout" $passed ($afterLogout | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Clean up cookie file
+if (Test-Path $cookieFile) { Remove-Item $cookieFile -Force }
+
+# ============================================================================
+# 📚 CONTENT TESTS (Courses & Lectures)
+# ============================================================================
+Write-TestHeader "📚 Content Tests"
+
+# Test 9: Get all courses (empty initially)
+Write-Host "  Testing GET /courses..." -ForegroundColor Gray
+$coursesResult = Invoke-TestRequest -Method GET -Path "/courses"
+$passed = $coursesResult -is [Array]
+Write-TestResult "Get courses list" $passed "Returned array with $($coursesResult.Count) items"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 10: Get lectures (empty initially)
+Write-Host "  Testing GET /lectures..." -ForegroundColor Gray
+$lecturesResult = Invoke-TestRequest -Method GET -Path "/lectures"
+$passed = $lecturesResult -is [Array]
+Write-TestResult "Get lectures list" $passed "Returned array with $($lecturesResult.Count) items"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 11: Get lectures by course_id (empty)
+Write-Host "  Testing GET /lectures?course_id=xxx..." -ForegroundColor Gray
+$courseLectures = Invoke-TestRequest -Method GET -Path "/lectures?course_id=test-course"
+$passed = $courseLectures -is [Array]
+Write-TestResult "Get lectures by course_id" $passed "Returned array with $($courseLectures.Count) items"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 12: Get resources for lecture (empty)
+Write-Host "  Testing GET /resources?lecture_id=xxx..." -ForegroundColor Gray
+$resourcesResult = Invoke-TestRequest -Method GET -Path "/resources?lecture_id=test-lecture"
+$passed = $resourcesResult -is [Array]
+Write-TestResult "Get resources by lecture_id" $passed "Returned array with $($resourcesResult.Count) items"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# ============================================================================
+# 🔍 SEARCH TESTS
+# ============================================================================
+Write-TestHeader "🔍 Search Tests"
+
+# Test 13: Search with empty query
+Write-Host "  Testing GET /search?q=..." -ForegroundColor Gray
+$searchEmpty = Invoke-TestRequest -Method GET -Path "/search?q="
+$passed = $searchEmpty -is [Array]
+Write-TestResult "Search with empty query" $passed "Returned array with $($searchEmpty.Count) items"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 14: Search with keyword
+Write-Host "  Testing GET /search?q=test..." -ForegroundColor Gray
+$searchKeyword = Invoke-TestRequest -Method GET -Path "/search?q=test"
+$passed = $searchKeyword -is [Array]
+Write-TestResult "Search with keyword" $passed "Returned array with $($searchKeyword.Count) items"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# ============================================================================
+# 📊 ANALYTICS TESTS
+# ============================================================================
+Write-TestHeader "📊 Analytics Tests"
+
+# Test 15: Get popular lectures (empty initially)
+Write-Host "  Testing GET /analytics/popular..." -ForegroundColor Gray
+$popularResult = Invoke-TestRequest -Method GET -Path "/analytics/popular"
+$passed = $popularResult -is [Array]
+Write-TestResult "Get popular lectures" $passed "Returned array with $($popularResult.Count) items"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 16: Get recent lectures (empty initially)
+Write-Host "  Testing GET /analytics/recent..." -ForegroundColor Gray
+$recentResult = Invoke-TestRequest -Method GET -Path "/analytics/recent"
+$passed = $recentResult -is [Array]
+Write-TestResult "Get recent lectures" $passed "Returned array with $($recentResult.Count) items"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# ============================================================================
+# 👤 USER FEATURE TESTS (Requires Auth)
+# ============================================================================
+Write-TestHeader "👤 User Feature Tests"
+
+# Re-login for user tests
+$cookieFile = "$env:TEMP\test-cookies-$(Get-Random).txt"
+$loginResult = Invoke-TestRequest -Method POST -Path "/auth/login" -Body @{
+    email = $TEST_EMAIL
+    password = $TEST_PASSWORD
+} -CookieFile $cookieFile
+
+if ($loginResult -and $loginResult.ok) {
+    # Test 17: Track lecture view
+    Write-Host "  Testing GET /lectures/view/{id}..." -ForegroundColor Gray
+    $viewResult = Invoke-TestRequest -Method GET -Path "/lectures/view/test-lecture-id" -CookieFile $cookieFile
+    $passed = $viewResult -and $viewResult.ok -eq $true
+    Write-TestResult "Track lecture view" $passed ($viewResult | ConvertTo-Json -Compress)
+    if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+    # Test 18: Add bookmark
+    Write-Host "  Testing POST /bookmark..." -ForegroundColor Gray
+    $bookmarkResult = Invoke-TestRequest -Method POST -Path "/bookmark" -Body @{
+        lecture_id = "test-lecture-id"
+    } -CookieFile $cookieFile
+    $passed = $bookmarkResult -and $bookmarkResult.ok -eq $true
+    Write-TestResult "Add bookmark" $passed ($bookmarkResult | ConvertTo-Json -Compress)
+    if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+    # Test 19: Get bookmarks
+    Write-Host "  Testing GET /bookmarks..." -ForegroundColor Gray
+    $getBookmarks = Invoke-TestRequest -Method GET -Path "/bookmarks" -CookieFile $cookieFile
+    $passed = $getBookmarks -is [Array]
+    Write-TestResult "Get user bookmarks" $passed "Returned array with $($getBookmarks.Count) items"
+    if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+    # Test 20: Update progress
+    Write-Host "  Testing POST /progress..." -ForegroundColor Gray
+    $progressResult = Invoke-TestRequest -Method POST -Path "/progress" -Body @{
+        lecture_id = "test-lecture-id"
+        status = "watched"
+    } -CookieFile $cookieFile
+    $passed = $progressResult -and $progressResult.ok -eq $true
+    Write-TestResult "Update progress" $passed ($progressResult | ConvertTo-Json -Compress)
+    if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+    # Test 21: Get progress
+    Write-Host "  Testing GET /progress..." -ForegroundColor Gray
+    $getProgress = Invoke-TestRequest -Method GET -Path "/progress" -CookieFile $cookieFile
+    $passed = $getProgress -is [Array]
+    Write-TestResult "Get user progress" $passed "Returned array with $($getProgress.Count) items"
+    if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+    # Test 22: Add note
+    Write-Host "  Testing POST /notes..." -ForegroundColor Gray
+    $noteResult = Invoke-TestRequest -Method POST -Path "/notes" -Body @{
+        lecture_id = "test-lecture-id"
+        content = "Test note content"
+    } -CookieFile $cookieFile
+    $passed = $noteResult -and $noteResult.ok -eq $true
+    Write-TestResult "Add note" $passed ($noteResult | ConvertTo-Json -Compress)
+    if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+    # Test 23: Get notes
+    Write-Host "  Testing GET /notes..." -ForegroundColor Gray
+    $getNotes = Invoke-TestRequest -Method GET -Path "/notes" -CookieFile $cookieFile
+    $passed = $getNotes -is [Array]
+    Write-TestResult "Get user notes" $passed "Returned array with $($getNotes.Count) items"
+    if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+    # Test 24: Add rating
+    Write-Host "  Testing POST /rating..." -ForegroundColor Gray
+    $ratingResult = Invoke-TestRequest -Method POST -Path "/rating" -Body @{
+        lecture_id = "test-lecture-id"
+        score = 5
+    } -CookieFile $cookieFile
+    $passed = $ratingResult -and $ratingResult.ok -eq $true
+    Write-TestResult "Add rating" $passed ($ratingResult | ConvertTo-Json -Compress)
+    if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+    # Logout after user tests
+    Invoke-TestRequest -Method POST -Path "/auth/logout" -CookieFile $cookieFile | Out-Null
+    if (Test-Path $cookieFile) { Remove-Item $cookieFile -Force }
+} else {
+    Write-Host "  ⚠️  Skipping user feature tests - login failed" -ForegroundColor $Warning
+}
+
+# ============================================================================
+# 💬 COMMENTS TESTS (Durable Objects)
+# ============================================================================
+Write-TestHeader "💬 Comments Tests (Durable Objects)"
+
+$lectureId = "test-lecture-$(Get-Random)"
+
+# Test 25: Get comments for new lecture (empty)
+Write-Host "  Testing GET /comments/{id}..." -ForegroundColor Gray
+$commentsEmpty = Invoke-TestRequest -Method GET -Path "/comments/$lectureId"
+$passed = $commentsEmpty -is [Array] -and $commentsEmpty.Count -eq 0
+Write-TestResult "Get empty comments" $passed "Returned empty array"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 26: Post new comment
+Write-Host "  Testing POST /comments/{id}..." -ForegroundColor Gray
+$commentResult = Invoke-TestRequest -Method POST -Path "/comments/$lectureId" -Body @{
+    user = "TestUser"
+    text = "This is a test comment"
+}
+$passed = $commentResult -and $commentResult.id -and $commentResult.text -eq "This is a test comment"
+Write-TestResult "Post new comment" $passed ($commentResult | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 27: Get comments after posting
+Write-Host "  Testing GET /comments/{id} after post..." -ForegroundColor Gray
+$commentsAfter = Invoke-TestRequest -Method GET -Path "/comments/$lectureId"
+$passed = $commentsAfter -is [Array] -and $commentsAfter.Count -eq 1 -and $commentsAfter[0].text -eq "This is a test comment"
+Write-TestResult "Get comments after post" $passed "Returned $($commentsAfter.Count) comment(s)"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 28: Post another comment
+Write-Host "  Testing POST second comment..." -ForegroundColor Gray
+$comment2Result = Invoke-TestRequest -Method POST -Path "/comments/$lectureId" -Body @{
+    user = "AnotherUser"
+    text = "Second comment"
+}
+$passed = $comment2Result -and $comment2Result.id
+Write-TestResult "Post second comment" $passed ($comment2Result | ConvertTo-Json -Compress)
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# Test 29: Verify both comments returned
+Write-Host "  Testing GET comments returns both..." -ForegroundColor Gray
+$commentsBoth = Invoke-TestRequest -Method GET -Path "/comments/$lectureId"
+$passed = $commentsBoth -is [Array] -and $commentsBoth.Count -eq 2
+Write-TestResult "Get both comments" $passed "Returned $($commentsBoth.Count) comment(s)"
+if ($passed) { $testResults.passed++ } else { $testResults.failed++ }
+
+# ============================================================================
+# ⚙️ ADMIN TESTS (Requires Admin Role)
+# ============================================================================
+Write-TestHeader "⚙️ Admin Tests"
+
+# First, promote test user to admin via direct D1 manipulation
+# Note: In production, you'd do this via D1 Console or a secure admin endpoint
+Write-Host "  ⚠️  Admin tests require manual admin promotion via D1 Console:" -ForegroundColor $Warning
+Write-Host "     UPDATE users SET role = 'admin' WHERE email = '$ADMIN_EMAIL';" -ForegroundColor Gray
+
+# Create admin account for testing
+Write-Host "  Creating admin test account..." -ForegroundColor Gray
+$adminRegister = Invoke-TestRequest -Method POST -Path "/auth/register" -Body @{
+    email = $ADMIN_EMAIL
+    password = $ADMIN_PASSWORD
+}
+if ($adminRegister -and $adminRegister.ok) {
+    Write-Host "  ✅ Admin account created (promote manually via D1 Console)" -ForegroundColor $Success
+}
+
+# Admin tests require manual promotion, so we'll skip for now
+Write-Host "  ⏭️  Skipping admin tests - requires manual admin role assignment" -ForegroundColor $Info
+
+# ============================================================================
+# 📋 TEST SUMMARY
+# ============================================================================
+Write-Host "`n========================================" -ForegroundColor $Info
+Write-Host "  📊 Test Summary" -ForegroundColor $Info
+Write-Host "========================================" -ForegroundColor $Info
+Write-Host "  ✅ Passed: $($testResults.passed)" -ForegroundColor $Success
+Write-Host "  ❌ Failed: $($testResults.failed)" -ForegroundColor $Error
+$total = $testResults.passed + $testResults.failed
+$percent = if ($total -gt 0) { [math]::Round(($testResults.passed / $total) * 100) } else { 0 }
+Write-Host "  📈 Success Rate: $percent%" -ForegroundColor $(if ($percent -ge 80) { $Success } elseif ($percent -ge 50) { $Warning } else { $Error })
+Write-Host "========================================`n" -ForegroundColor $Info
+
+# Exit with appropriate code
+if ($testResults.failed -eq 0) {
+    Write-Host "🎉 All tests passed!" -ForegroundColor $Success
+    exit 0
+} else {
+    Write-Host "⚠️  Some tests failed. Review output above." -ForegroundColor $Warning
+    exit 1
+}
