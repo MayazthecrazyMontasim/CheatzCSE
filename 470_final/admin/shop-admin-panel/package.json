@@ -1,0 +1,13 @@
+{
+  "name": "shop-admin-panel",
+  "version": "1.0.0",
+  "description": "MongoDB Shop Admin Panel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongodb": "^6.7.0"
+  }
+}

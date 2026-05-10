@@ -1,0 +1,53 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f9;
+}
+
+.container {
+  width: 95%;
+  margin: 30px auto;
+}
+
+h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.stats {
+  margin-bottom: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+thead {
+  background: #007bff;
+  color: white;
+}
+
+th,
+td {
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+  vertical-align: top;
+}
+
+tr:hover {
+  background: #f1f1f1;
+}
+
+.bookmark-item {
+  background: #eef3ff;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  word-break: break-all;
+}
