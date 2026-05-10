@@ -1,22 +1,9 @@
-const getCourseHTML = (course, allCourses) => {
-    // Get related courses
-    const related = allCourses
-        .filter(c => c.slug !== course.slug)
-        .slice(0, 3);
-
-    // Extract YouTube video ID
-    let videoId = '';
-    if (course.youtube) {
-        const match = course.youtube.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-        if (match) videoId = match[1];
-    }
-
-    return `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${course.title} - ED-Tech</title>
+    <title>cse340 - ED-Tech</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
@@ -363,24 +350,24 @@ const getCourseHTML = (course, allCourses) => {
     <header class="border-b border-gray-100">
         <div class="max-w-3xl mx-auto px-6 py-16">
             <!-- Tags -->
-            ${course.tags && course.tags.length > 0 ? `
+            
             <div class="flex flex-wrap gap-2 mb-4">
-                ${course.tags.map(tag => `
+                
                 <span class="text-xs font-medium text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
-                    ${tag}
+                    test
                 </span>
-                `).join('')}
+                
             </div>
-            ` : ''}
+            
             
             <!-- Title -->
             <h1 class="text-4xl font-bold text-gray-900 mb-3 tracking-tight leading-tight">
-                ${course.title}
+                cse340
             </h1>
             
             <!-- Summary -->
             <p class="text-lg text-gray-500 mb-6 leading-relaxed max-w-2xl">
-                ${course.summary}
+                niceeee
             </p>
             
             <!-- Meta Info -->
@@ -389,48 +376,48 @@ const getCourseHTML = (course, allCourses) => {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                     </svg>
-                    ${course.faculty}
+                    tba
                 </span>
-                ${course.level ? `
+                
                 <span class="flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                     </svg>
-                    ${course.level}
+                    new
                 </span>
-                ` : ''}
-                ${course.duration ? `
+                
+                
                 <span class="flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    ${course.duration} weeks
+                    6 weeks
                 </span>
-                ` : ''}
+                
             </div>
             
             <!-- Action Buttons -->
             <div class="flex flex-wrap items-center gap-2 no-print">
-                ${course.pdf ? `
-                <a href="${course.pdf}" target="_blank" class="btn">
+                
+                <a href="https://drive.google.com/" target="_blank" class="btn">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                     PDF Notes
                 </a>
-                ` : ''}
                 
-                ${videoId ? `
-                <a href="${course.youtube}" target="_blank" class="btn">
+                
+                
+                <a href="https://youtu.be/5gM5RtBvXEE?si=kToMODG9rETk9yVz" target="_blank" class="btn">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     Watch Video
                 </a>
-                ` : ''}
                 
-                <button onclick="toggleBookmark('${course.slug}')" id="bookmarkBtn" class="btn">
+                
+                <button onclick="toggleBookmark('cse340')" id="bookmarkBtn" class="btn">
                     <svg id="bookmarkIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
                     </svg>
@@ -441,24 +428,25 @@ const getCourseHTML = (course, allCourses) => {
     </header>
 
     <!-- Video Embed -->
-    ${videoId ? `
+    
     <div class="max-w-3xl mx-auto px-6 pt-12 no-print">
         <div class="aspect-video rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
             <iframe 
                 class="w-full h-full"
-                src="https://www.youtube.com/embed/${videoId}" 
+                src="https://www.youtube.com/embed/5gM5RtBvXEE?si=kToMODG9rETk9yVz" 
                 frameborder="0" 
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                 allowfullscreen>
             </iframe>
         </div>
     </div>
-    ` : ''}
+    
 
     <!-- Course Content -->
     <article class="max-w-3xl mx-auto px-6 py-12">
         <div class="content">
-            ${course.htmlContent}
+            <p>gsc xhh HJ Cnhj</p>
+
         </div>
     </article>
        <!-- Anonymous Comment Box -->
@@ -501,7 +489,7 @@ const getCourseHTML = (course, allCourses) => {
                     </div>
                 </div>
 
-                <button class="comment-submit-btn" id="commentSubmitBtn" onclick="submitCourseComment('${course.slug}', '${course.title}')">
+                <button class="comment-submit-btn" id="commentSubmitBtn" onclick="submitCourseComment('cse340', 'cse340')">
                     <div class="comment-spinner" id="commentSpinner"></div>
                     <span id="commentBtnText">Submit Anonymously</span>
                 </button>
@@ -518,28 +506,34 @@ const getCourseHTML = (course, allCourses) => {
     </section>
 
     <!-- Related Courses -->
-    ${related.length > 0 ? `
+    
     <section class="border-t border-gray-100 no-print">
         <div class="max-w-3xl mx-auto px-6 py-16">
             <h2 class="text-lg font-semibold text-gray-900 mb-6">Related Courses</h2>
             <div class="grid sm:grid-cols-3 gap-4">
-                ${related.map(c => `
-                <a href="/courses/${c.slug}" class="group block p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition">
-                    <h3 class="font-medium text-gray-900 group-hover:text-blue-600 transition mb-1">${c.title}</h3>
-                    <p class="text-sm text-gray-500 line-clamp-2">${c.summary}</p>
-                    <span class="text-xs text-gray-400 mt-2 block">${c.faculty}</span>
+                
+                <a href="/courses/sensai" class="group block p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+                    <h3 class="font-medium text-gray-900 group-hover:text-blue-600 transition mb-1">cse490</h3>
+                    <p class="text-sm text-gray-500 line-clamp-2">dhyucbydbncujd</p>
+                    <span class="text-xs text-gray-400 mt-2 block">taw</span>
                 </a>
-                `).join('')}
+                
+                <a href="/courses/python-basics" class="group block p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition">
+                    <h3 class="font-medium text-gray-900 group-hover:text-blue-600 transition mb-1">Python Programming Basics</h3>
+                    <p class="text-sm text-gray-500 line-clamp-2">Learn Python programming from scratch with hands-on examples and real-world projects</p>
+                    <span class="text-xs text-gray-400 mt-2 block">Dr. Sarah Rahman</span>
+                </a>
+                
             </div>
         </div>
     </section>
-    ` : ''}
+    
 
     <!-- Footer -->
     <footer class="border-t border-gray-100 no-print">
         <div class="max-w-3xl mx-auto px-6 py-8">
             <p class="text-center text-sm text-gray-400">
-                © ${new Date().getFullYear()} ED-Tech Platform
+                © 2026 ED-Tech Platform
             </p>
         </div>
     </footer>
@@ -551,7 +545,7 @@ const getCourseHTML = (course, allCourses) => {
 
     <!-- Scripts -->
     <script>
-        const COMMENT_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx_oPqeUEmqjNZBarK8UFF9suoBcOfj1BnPuyCTxqWVpAIK2yYmJEkbSgH1XSNjUqc/exec";
+        const COMMENT_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAFWn-CE4hzxtY0GZKTd150bAdIQ4Sw9T9My7zHlAtVJvGDPTpDqwcozZ8uumZjAx5tg/exec";
         // Reading progress bar
         window.addEventListener('scroll', () => {
             const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -628,7 +622,7 @@ const getCourseHTML = (course, allCourses) => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.bookmarks && data.bookmarks.includes('${course.slug}')) {
+                    if (data.bookmarks && data.bookmarks.includes('cse340')) {
                         const btn = document.getElementById('bookmarkBtn');
                         const text = document.getElementById('bookmarkText');
                         const icon = document.getElementById('bookmarkIcon');
@@ -739,7 +733,4 @@ const getCourseHTML = (course, allCourses) => {
         }
     </script>
 </body>
-</html>`;
-};
-
-module.exports = { getCourseHTML };
+</html>

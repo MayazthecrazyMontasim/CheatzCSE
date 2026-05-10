@@ -1,11 +1,36 @@
 [
   {
+    "title": "cse340",
+    "slug": "cse340",
+    "summary": "niceeee",
+    "faculty": "tba",
+    "level": "new",
+    "duration": "6",
+    "featured": true,
+    "tags": [
+      "test"
+    ]
+  },
+  {
+    "title": "cse490",
+    "slug": "sensai",
+    "summary": "dhyucbydbncujd",
+    "faculty": "taw",
+    "level": "Beginner",
+    "duration": "8 weeks",
+    "featured": false,
+    "tags": [
+      "nice"
+    ]
+  },
+  {
     "title": "Python Programming Basics",
     "slug": "python-basics",
     "summary": "Learn Python programming from scratch with hands-on examples and real-world projects",
     "faculty": "Dr. Sarah Rahman",
     "level": "Beginner",
     "duration": "6 Weeks",
+    "featured": true,
     "tags": [
       "Python",
       "Programming",
