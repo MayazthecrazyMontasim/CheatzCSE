@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edge Academy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans" x-data="homeApp()" x-init="init()">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-indigo-600">Edge Academy</a>
+                    <div class="hidden md:flex ml-10 space-x-8">
+                        <a href="/search.html" class="text-gray-500 hover:text-gray-900">Search</a>
+                        <a href="/user.html" x-show="user" class="text-gray-500 hover:text-gray-900">My Progress</a>
+                        <a href="/admin.html" x-show="user?.role === 'admin'" class="text-red-500 hover:text-red-700">Admin</a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <template x-if="!user">
+                        <button @click="showLogin = true" class="text-indigo-600 hover:text-indigo-500 font-medium">Log in</button>
+                    </template>
+                    <template x-if="user">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600" x-text="user.email"></span>
+                            <button @click="logout()" class="text-sm text-red-500 hover:text-red-700">Logout</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Search Bar -->
+        <div class="mb-10">
+            <form action="/search.html" method="GET" class="relative">
+                <input type="text" name="q" placeholder="Search lectures, topics, or tags..." 
+                       class="w-full px-5 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+                <button type="submit" class="absolute right-2 top-2 bg-indigo-600 text-white px-4 py-1.5 rounded-md hover:bg-indigo-700">Search</button>
+            </form>
+        </div>
+
+        <!-- Announcements -->
+        <div x-show="announcements.length > 0" class="mb-8 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+            <h3 class="font-bold text-blue-800 mb-2">📢 Latest Announcements</h3>
+            <template x-for="a in announcements" :key="a.id">
+                <div class="mb-2 last:mb-0">
+                    <span class="font-semibold text-blue-900" x-text="a.title"></span>: 
+                    <span class="text-blue-700" x-text="a.content"></span>
+                </div>
+            </template>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Popular & Recent -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Popular This Week -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">🔥 Popular This Week</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <template x-for="lec in popular" :key="lec.id">
+                            <a :href="`/lecture.html?id=${lec.id}`" class="block bg-white p-4 rounded-lg shadow hover:shadow-md transition border border-gray-100">
+                                <div class="text-xs text-indigo-600 font-semibold uppercase tracking-wide mb-1" x-text="`Week ${lec.week}`"></div>
+                                <h3 class="font-bold text-gray-800 truncate" x-text="lec.topic"></h3>
+                                <p class="text-sm text-gray-500 mt-1 truncate" x-text="getCourseTitle(lecs_meta[lec.course_id])"></p>
+                            </a>
+                        </template>
+                        <div x-show="popular.length === 0" class="text-gray-400 italic">No views yet this week.</div>
+                    </div>
+                </section>
+
+                <!-- Recently Added -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">🆕 Recently Added</h2>
+                    <div class="space-y-3">
+                        <template x-for="lec in recent" :key="lec.id">
+                            <a :href="`/lecture.html?id=${lec.id}`" class="flex items-center bg-white p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+                                <div class="h-10 w-10 bg-red-100 rounded flex items-center justify-center text-red-600 mr-3">▶</div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900" x-text="lec.topic"></h4>
+                                    <p class="text-xs text-gray-500" x-text="new Date(lec.created_at).toLocaleDateString()"></p>
+                                </div>
+                            </a>
+                        </template>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Browse by Semester/Course -->
+            <aside class="space-y-6">
+                <div class="bg-white p-5 rounded-lg shadow border border-gray-100">
+                    <h3 class="font-bold text-gray-900 mb-4">📂 Browse Courses</h3>
+                    <template x-for="course in courses" :key="course.id">
+                        <a :href="`/course.html?id=${course.id}`" class="block py-2 border-b border-gray-100 last:border-0 hover:text-indigo-600 transition">
+                            <span class="font-medium" x-text="course.title"></span>
+                            <span class="text-xs text-gray-400 block" x-text="getSemesterName(course.semester_id)"></span>
+                        </a>
+                    </template>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+    <div x-show="showLogin" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md" @click.away="showLogin = false">
+            <h2 class="text-xl font-bold mb-4">Log In</h2>
+            <form @submit.prevent="login()">
+                <input x-model="loginForm.email" type="email" placeholder="Email" class="w-full mb-3 p-2 border rounded" required>
+                <input x-model="loginForm.password" type="password" placeholder="Password" class="w-full mb-4 p-2 border rounded" required>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Enter</button>
+            </form>
+            <p class="mt-4 text-sm text-center text-gray-600">
+                Don't have an account? <a href="#" @click.prevent="register()" class="text-indigo-600">Register</a>
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { fetchAPI } from './assets/js/api.js';
+        
+        window.homeApp = () => ({
+            user: null,
+            showLogin: false,
+            loginForm: { email: '', password: '' },
+            courses: [],
+            semesters: {},
+            popular: [],
+            recent: [],
+            announcements: [],
+            lecs_meta: {}, // Cache for course titles
+
+            async init() {
+                // Load User
+                try { this.user = await fetchAPI('/auth/me'); } catch(e) {}
+                
+                // Load Content
+                const [courses, pop, rec, ann] = await Promise.all([
+                    fetchAPI('/courses'),
+                    fetchAPI('/analytics/popular').catch(() => []),
+                    fetchAPI('/analytics/recent').catch(() => []),
+                    fetchAPI('/admin/announcements').catch(() => [])
+                ]);
+
+                this.courses = courses;
+                this.popular = pop;
+                this.recent = rec;
+                this.announcements = ann;
+
+                // Map course IDs to titles for display
+                courses.forEach(c => {
+                    this.lecs_meta[c.id] = c.title;
+                    this.semesters[c.semester_id] = c.semester_id; // Simplified for demo
+                });
+            },
+
+            getCourseTitle(id) { return this.lecs_meta[id] || 'Unknown Course'; },
+            getSemesterName(id) { return `Semester ${id}`; }, // Simplified
+
+            async login() {
+                try {
+                    await fetchAPI('/auth/login', { method: 'POST', body: JSON.stringify(this.loginForm) });
+                    this.user = await fetchAPI('/auth/me');
+                    this.showLogin = false;
+                } catch (e) { alert('Login failed'); }
+            },
+            async register() {
+                // Simple toggle for demo, ideally a separate form
+                const email = prompt("Enter email to register:");
+                const pass = prompt("Enter password:");
+                if(email && pass) {
+                    try {
+                        await fetchAPI('/auth/register', { method: 'POST', body: JSON.stringify({ email, password: pass }) });
+                        alert('Registered! Please log in.');
+                    } catch(e) { alert('Registration failed'); }
+                }
+            },
+            async logout() {
+                // Clear cookie via backend or just reload
+                document.cookie = "session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                window.location.reload();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans" x-data="lectureApp()" x-init="init()">
+
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between">
+            <a href="/" class="text-indigo-600 hover:underline">&larr; Home</a>
+            <span x-text="user?.email || 'Guest'" class="text-sm text-gray-500"></span>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Main Column: Video & Info -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Video Player -->
+            <div class="aspect-w-16 aspect-h-9 bg-black rounded-lg overflow-hidden shadow-lg">
+                <iframe :src="`https://www.youtube.com/embed/${lecture.youtube_id}`" 
+                        class="w-full h-[400px]" frameborder="0" allowfullscreen
+                        @load="trackView()"></iframe>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900" x-text="lecture.topic"></h1>
+                        <p class="text-sm text-gray-500 mt-1">Week <span x-text="lecture.week"></span></p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button @click="toggleBookmark()" 
+                                :class="bookmarked ? 'bg-yellow-100 text-yellow-700 border-yellow-300' : 'bg-white text-gray-700 border-gray-300'"
+                                class="px-3 py-1 border rounded text-sm font-medium hover:bg-gray-50">
+                            <span x-text="bookmarked ? '★ Saved' : '☆ Save'"></span>
+                        </button>
+                        <button @click="markProgress('watched')" 
+                                :class="progressStatus === 'watched' ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white text-gray-700 border-gray-300'"
+                                class="px-3 py-1 border rounded text-sm font-medium hover:bg-gray-50">
+                            <span x-text="progressStatus === 'watched' ? '✓ Watched' : 'Mark Watched'"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resources -->
+            <div class="bg-white p-6 rounded-lg shadow" x-show="resources.length > 0">
+                <h3 class="font-bold text-gray-900 mb-3">📎 Resources</h3>
+                <ul class="space-y-2">
+                    <template x-for="res in resources" :key="res.id">
+                        <li>
+                            <a :href="`https://pub-<YOUR_R2_PUBLIC_BUCKET>.r2.dev/${res.r2_path}`" target="_blank" 
+                               class="flex items-center text-indigo-600 hover:underline">
+                                📄 <span x-text="res.filename" class="ml-2"></span>
+                            </a>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <!-- Comments -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="font-bold text-gray-900 mb-4">💬 Discussion</h3>
+                
+                <form @submit.prevent="postComment()" class="mb-6">
+                    <textarea x-model="newComment" placeholder="Ask a question or add a timestamped note..." 
+                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" rows="3"></textarea>
+                    <div class="mt-2 flex justify-end">
+                        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Post Comment</button>
+                    </div>
+                </form>
+
+                <div class="space-y-4">
+                    <template x-for="c in comments" :key="c.id">
+                        <div class="border-b border-gray-100 pb-3 last:border-0">
+                            <div class="flex justify-between items-baseline">
+                                <span class="font-semibold text-gray-800" x-text="c.user"></span>
+                                <span class="text-xs text-gray-400" x-text="new Date(c.timestamp).toLocaleTimeString()"></span>
+                            </div>
+                            <p class="text-gray-600 mt-1" x-text="c.text"></p>
+                        </div>
+                    </template>
+                    <div x-show="comments.length === 0" class="text-gray-400 italic">No comments yet. Be the first!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Notes & Related -->
+        <aside class="space-y-6">
+            <!-- Personal Notes -->
+            <div class="bg-white p-5 rounded-lg shadow border-t-4 border-indigo-500">
+                <h3 class="font-bold text-gray-900 mb-2">📝 My Notes</h3>
+                <textarea x-model="myNote" @blur="saveNote()" 
+                          class="w-full p-2 border border-gray-200 rounded text-sm focus:border-indigo-500 focus:outline-none" 
+                          rows="6" placeholder="Write private study notes here..."></textarea>
+                <p class="text-xs text-gray-400 mt-1">Auto-saved on blur.</p>
+            </div>
+
+            <!-- Rating -->
+            <div class="bg-white p-5 rounded-lg shadow">
+                <h3 class="font-bold text-gray-900 mb-2">Rate this Lecture</h3>
+                <div class="flex space-x-1">
+                    <template x-for="i in 5">
+                        <button @click="rate(i)" class="text-2xl hover:scale-110 transition" 
+                                :class="i <= myRating ? 'text-yellow-400' : 'text-gray-300'">★</button>
+                    </template>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script type="module">
+        import { fetchAPI } from './assets/js/api.js';
+        window.lectureApp = () => ({
+            user: null,
+            lecture: {},
+            resources: [],
+            comments: [],
+            bookmarked: false,
+            progressStatus: null,
+            newComment: '',
+            myNote: '',
+            myRating: 0,
+
+            async init() {
+                try { this.user = await fetchAPI('/auth/me'); } catch(e){}
+                const id = new URLSearchParams(location.search).get('id');
+                if(!id) return;
+
+                // Load Lecture Data
+                const lecs = await fetchAPI(`/lectures?id=${id}`); // Assuming worker returns array
+                this.lecture = lecs[0] || {};
+                
+                // Load Resources
+                this.resources = await fetchAPI(`/resources?lecture_id=${id}`).catch(()=>[]);
+                
+                // Load Comments
+                this.comments = await fetchAPI(`/comments/${id}`).catch(()=>[]);
+
+                // Load User State if logged in
+                if(this.user) {
+                    const bookmarks = await fetchAPI('/bookmarks').catch(()=>[]);
+                    this.bookmarked = bookmarks.some(b => b.lecture_id === id);
+                    
+                    const progress = await fetchAPI('/progress').catch(()=>[]);
+                    const p = progress.find(p => p.lecture_id === id);
+                    this.progressStatus = p ? p.status : null;
+
+                    const notes = await fetchAPI('/notes').catch(()=>[]);
+                    const n = notes.find(n => n.lecture_id === id);
+                    if(n) this.myNote = n.content;
+                }
+            },
+
+            async trackView() {
+                await fetchAPI(`/lectures/view/${this.lecture.id}`).catch(()=>{});
+            },
+
+            async toggleBookmark() {
+                if(!this.user) return alert('Please log in');
+                await fetchAPI('/bookmark', { method: 'POST', body: JSON.stringify({ lecture_id: this.lecture.id }) });
+                this.bookmarked = !this.bookmarked;
+            },
+
+            async markProgress(status) {
+                if(!this.user) return alert('Please log in');
+                await fetchAPI('/progress', { method: 'POST', body: JSON.stringify({ lecture_id: this.lecture.id, status }) });
+                this.progressStatus = status;
+            },
+
+            async postComment() {
+                if(!this.newComment.trim()) return;
+                const userLabel = this.user ? this.user.email.split('@')[0] : 'Anonymous';
+                const c = await fetchAPI(`/comments/${this.lecture.id}`, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ user: userLabel, text: this.newComment }) 
+                });
+                this.comments.unshift(c);
+                this.newComment = '';
+            },
+
+            async saveNote() {
+                if(!this.user) return;
+                await fetchAPI('/notes', { method: 'POST', body: JSON.stringify({ lecture_id: this.lecture.id, content: this.myNote }) });
+            },
+
+            async rate(score) {
+                if(!this.user) return alert('Please log in');
+                await fetchAPI('/rating', { method: 'POST', body: JSON.stringify({ lecture_id: this.lecture.id, score }) });
+                this.myRating = score;
+            }
+        });
+    </script>
+</body>
+</html>

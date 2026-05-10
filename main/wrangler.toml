@@ -1,0 +1,27 @@
+name = "edu-platform"
+compatibility_date = "2025-12-01"
+main = "worker/index.ts"
+
+[vars]
+SESSION_TTL = 604800
+
+[[d1_databases]]
+binding = "DB"
+database_name = "edu_platform_db"
+database_id = "YOUR_ACTUAL_D1_ID_HERE"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "YOUR_ACTUAL_SESSIONS_KV_ID_HERE"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "YOUR_ACTUAL_CACHE_KV_ID_HERE"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "edu-platform-assets"
+
+[durable_objects.bindings]
+name = "COMMENTS_DO"
+class_name = "LectureCommentsDO"

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans" x-data="searchApp()" x-init="init()">
+    <nav class="bg-white border-b border-gray-200 p-4">
+        <a href="/" class="text-indigo-600 hover:underline">&larr; Home</a>
+    </nav>
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold mb-6">Search Results for "<span x-text="query"></span>"</h1>
+        
+        <div class="space-y-4">
+            <template x-for="lec in results" :key="lec.id">
+                <a :href="`/lecture.html?id=${lec.id}`" class="block bg-white p-4 rounded shadow hover:shadow-md border border-gray-100">
+                    <h3 class="text-lg font-bold text-indigo-600" x-text="lec.topic"></h3>
+                    <p class="text-sm text-gray-500 mt-1">Week <span x-text="lec.week"></span></p>
+                </a>
+            </template>
+            <div x-show="results.length === 0 && queried" class="text-gray-500">No results found.</div>
+        </div>
+    </main>
+    <script type="module">
+        import { fetchAPI } from './assets/js/api.js';
+        window.searchApp = () => ({
+            query: new URLSearchParams(location.search).get('q') || '',
+            results: [],
+            queried: false,
+            async init() {
+                if(this.query) {
+                    this.results = await fetchAPI(`/search?q=${encodeURIComponent(this.query)}`);
+                    this.queried = true;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
