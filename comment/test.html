@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Course Resource Submission</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body { background: #000; }
+  </style>
+</head>
+<body class="text-white min-h-screen flex items-center justify-center px-4">
+
+  <div class="w-full max-w-xl">
+    <h1 class="text-3xl font-semibold mb-8 border-b border-white pb-4">
+      Course Resource Submission
+    </h1>
+
+    <form id="form" class="space-y-5">
+
+      <input
+        id="name"
+        type="text"
+        placeholder="Name"
+        required
+        class="w-full bg-black border border-white px-4 py-3 outline-none focus:ring-2 focus:ring-white"
+      />
+
+      <input
+        id="course"
+        type="text"
+        placeholder="Course"
+        required
+        class="w-full bg-black border border-white px-4 py-3 outline-none focus:ring-2 focus:ring-white"
+      />
+
+      <input
+        id="drive"
+        type="text"
+        placeholder="Google Drive Link"
+        required
+        class="w-full bg-black border border-white px-4 py-3 outline-none focus:ring-2 focus:ring-white"
+      />
+
+      <input
+        id="youtube"
+        type="text"
+        placeholder="YouTube Link (optional)"
+        class="w-full bg-black border border-white px-4 py-3 outline-none focus:ring-2 focus:ring-white"
+      />
+
+      <textarea
+        id="comment"
+        placeholder="Comment (optional)"
+        rows="4"
+        class="w-full bg-black border border-white px-4 py-3 outline-none focus:ring-2 focus:ring-white"
+      ></textarea>
+
+      <button
+        type="submit"
+        class="w-full border border-white py-3 hover:bg-white hover:text-black transition"
+      >
+        Submit
+      </button>
+    </form>
+
+    <p id="msg" class="mt-6 text-sm"></p>
+  </div>
+
+<script>
+const endpoint = "https://script.google.com/macros/s/AKfycbzoIa4owOnRP9AJrwiGTZQcDzbRUulyLxoZNqvsf7ZqtUMHdB48DibwuCObmTASFTym/exec";
+
+document.getElementById("form").addEventListener("submit", async function(e){
+  e.preventDefault();
+
+  const msg = document.getElementById("msg");
+  msg.textContent = "Submitting...";
+
+  const data = {
+    name: document.getElementById("name").value,
+    course: document.getElementById("course").value,
+    drive: document.getElementById("drive").value,
+    youtube: document.getElementById("youtube").value,
+    comment: document.getElementById("comment").value
+  };
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(data),
+      redirect: "follow"
+    });
+
+    const result = await res.json();
+
+    if(result.status === "ok" || result.status === "success"){
+      msg.textContent = "Submitted successfully.";
+      document.getElementById("form").reset();
+    } else {
+      msg.textContent = "Submission failed.";
+    }
+
+  } catch (err) {
+    msg.textContent = "Error connecting to server.";
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayStation Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a38;
+    --accent: #7c5cfc;
+    --accent2: #fc5c7d;
+    --green: #22d3a5;
+    --red: #fc5c7d;
+    --yellow: #fbbf24;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --display: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 28px 0;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    padding: 0 24px 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .logo-mark {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .logo-mark span { color: var(--accent); }
+  .logo-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 24px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(124,92,252,0.08); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 20px 24px 0;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .db-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* Main */
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    padding: 36px 40px;
+    max-width: calc(100vw - 220px);
+  }
+
+  /* Header */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .page-title {
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .page-title span { color: var(--muted); font-weight: 600; font-size: 18px; margin-left: 10px; }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.revenue::before { background: linear-gradient(90deg, var(--accent), #a78bfa); }
+  .stat-card.paid::before { background: linear-gradient(90deg, var(--green), #34d399); }
+  .stat-card.failed::before { background: linear-gradient(90deg, var(--red), #f87171); }
+  .stat-card.total::before { background: linear-gradient(90deg, var(--yellow), #fb923c); }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+  }
+  .stat-value {
+    font-family: var(--display);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+  }
+  .stat-value.revenue { color: #a78bfa; }
+  .stat-value.paid { color: var(--green); }
+  .stat-value.failed { color: var(--red); }
+  .stat-value.total { color: var(--yellow); }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 340px;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px 10px 38px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13.5px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .filter-btns {
+    display: flex;
+    gap: 6px;
+  }
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .filter-btn.paid.active { background: var(--green); border-color: var(--green); }
+  .filter-btn.failed.active { background: var(--red); border-color: var(--red); }
+  .filter-btn.pending.active { background: var(--yellow); border-color: var(--yellow); color: #111; }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead tr {
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: left;
+    padding: 14px 20px;
+    font-weight: 500;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 14px 20px;
+    font-size: 13.5px;
+    vertical-align: middle;
+  }
+
+  .customer-name { font-weight: 500; color: var(--text); }
+  .customer-email { font-size: 11.5px; color: var(--muted); margin-top: 1px; font-family: var(--mono); }
+
+  .invoice-code {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .amount {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-family: var(--mono);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .badge-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .badge.paid { background: rgba(34,211,165,0.12); color: var(--green); }
+  .badge.paid .badge-dot { background: var(--green); }
+  .badge.failed { background: rgba(252,92,125,0.12); color: var(--red); }
+  .badge.failed .badge-dot { background: var(--red); }
+  .badge.pending { background: rgba(251,191,36,0.12); color: var(--yellow); }
+  .badge.pending .badge-dot { background: var(--yellow); }
+
+  .verified-icon { font-size: 14px; }
+
+  .actions { display: flex; gap: 8px; align-items: center; }
+  .btn-action {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--mono);
+  }
+  .btn-action:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-action.danger:hover { border-color: var(--red); color: var(--red); }
+
+  /* Date */
+  .date-str { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .page-info { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .page-btns { display: flex; gap: 6px; }
+  .page-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 7px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--mono);
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 560px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 32px 64px rgba(0,0,0,0.6);
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title {
+    font-family: var(--display);
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .modal-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { border-color: var(--red); color: var(--red); }
+
+  .modal-body { padding: 24px; }
+
+  .detail-section { margin-bottom: 22px; }
+  .detail-section-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+  }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .detail-item { background: var(--surface2); border-radius: 8px; padding: 12px 14px; }
+  .detail-item-label { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+  .detail-item-value { font-size: 13.5px; font-weight: 500; word-break: break-all; }
+
+  .items-table { width: 100%; border-collapse: collapse; }
+  .items-table th { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: left; padding: 8px 10px; background: var(--surface2); letter-spacing: 1px; text-transform: uppercase; }
+  .items-table td { font-size: 13px; padding: 10px 10px; border-top: 1px solid var(--border); }
+  .items-table tr:first-child td { border-top: none; }
+
+  .modal-actions {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: var(--mono);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #6b4fe0; }
+  .btn-success { background: rgba(34,211,165,0.15); color: var(--green); border-color: var(--green); }
+  .btn-success:hover { background: var(--green); color: #000; }
+  .btn-danger { background: rgba(252,92,125,0.12); color: var(--red); border-color: var(--red); }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+  .btn-ghost { background: var(--surface2); color: var(--muted); border-color: var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: var(--mono);
+    z-index: 999;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.25s;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  /* Empty */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-state .empty-icon { font-size: 42px; margin-bottom: 12px; }
+  .empty-state p { font-family: var(--mono); font-size: 13px; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 60px; color: var(--muted); font-family: var(--mono); font-size: 13px; }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">Pay<span>Station</span></div>
+    <div class="logo-sub">Admin Panel</div>
+  </div>
+  <div class="nav-item active" onclick="showPage('orders')">
+    <span class="nav-icon">📦</span> Orders
+  </div>
+  <div class="nav-item" onclick="showPage('stats')">
+    <span class="nav-icon">📊</span> Analytics
+  </div>
+  <div class="sidebar-footer">
+    <span class="db-dot"></span>paystation_demo
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <!-- Orders Page -->
+  <div id="page-orders">
+    <div class="page-header">
+      <div class="page-title">Orders <span id="order-count"></span></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card revenue">
+        <div class="stat-label">Revenue (Paid)</div>
+        <div class="stat-value revenue" id="stat-revenue">৳ —</div>
+      </div>
+      <div class="stat-card paid">
+        <div class="stat-label">Paid Orders</div>
+        <div class="stat-value paid" id="stat-paid">—</div>
+      </div>
+      <div class="stat-card failed">
+        <div class="stat-label">Failed Orders</div>
+        <div class="stat-value failed" id="stat-failed">—</div>
+      </div>
+      <div class="stat-card total">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value total" id="stat-total">—</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input class="search-input" type="text" placeholder="Search name, email, invoice…" id="search-input" oninput="debounceSearch()">
+      </div>
+      <div class="filter-btns">
+        <button class="filter-btn active" onclick="setFilter('all')" id="f-all">All</button>
+        <button class="filter-btn paid" onclick="setFilter('paid')" id="f-paid">Paid</button>
+        <button class="filter-btn failed" onclick="setFilter('failed')" id="f-failed">Failed</button>
+        <button class="filter-btn pending" onclick="setFilter('pending')" id="f-pending">Pending</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Invoice</th>
+            <th>Items</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Verified</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr><td colspan="8"><div class="loading"><div class="spinner"></div>Loading orders…</div></td></tr>
+        </tbody>
+      </table>
+      <div class="pagination">
+        <span class="page-info" id="page-info">—</span>
+        <div class="page-btns">
+          <button class="page-btn" id="btn-prev" onclick="changePage(-1)" disabled>← Prev</button>
+          <button class="page-btn" id="btn-next" onclick="changePage(1)" disabled>Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics Page -->
+  <div id="page-stats" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Analytics</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card revenue">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value revenue" id="a-revenue">৳ —</div>
+      </div>
+      <div class="stat-card paid">
+        <div class="stat-label">Paid</div>
+        <div class="stat-value paid" id="a-paid">—</div>
+      </div>
+      <div class="stat-card failed">
+        <div class="stat-label">Failed</div>
+        <div class="stat-value failed" id="a-failed">—</div>
+      </div>
+      <div class="stat-card total">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value total" id="a-pending">—</div>
+      </div>
+    </div>
+    <div class="table-wrap" style="padding:32px; text-align:center; color:var(--muted); font-family:var(--mono); font-size:13px;">
+      📊 More detailed analytics coming soon…
+    </div>
+  </div>
+</main>
+
+<!-- Order Detail Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOnBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Order Details</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentPage = 1;
+  let currentFilter = 'all';
+  let currentSearch = '';
+  let totalPages = 1;
+  let selectedOrder = null;
+  let searchTimeout = null;
+
+  // Init
+  loadStats();
+  loadOrders();
+
+  function showPage(page) {
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById('page-orders').style.display = page === 'orders' ? '' : 'none';
+    document.getElementById('page-stats').style.display = page === 'stats' ? '' : 'none';
+  }
+
+  async function loadStats() {
+    try {
+      const r = await fetch('/api/stats');
+      const d = await r.json();
+      document.getElementById('stat-revenue').textContent = '৳ ' + d.revenue.toLocaleString();
+      document.getElementById('stat-paid').textContent = d.paid;
+      document.getElementById('stat-failed').textContent = d.failed;
+      document.getElementById('stat-total').textContent = d.total;
+      document.getElementById('a-revenue').textContent = '৳ ' + d.revenue.toLocaleString();
+      document.getElementById('a-paid').textContent = d.paid;
+      document.getElementById('a-failed').textContent = d.failed;
+      document.getElementById('a-pending').textContent = d.pending;
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadOrders() {
+    const tbody = document.getElementById('orders-tbody');
+    tbody.innerHTML = '<tr><td colspan="8"><div class="loading"><div class="spinner"></div>Loading…</div></td></tr>';
+    try {
+      const params = new URLSearchParams({ page: currentPage, limit: 20 });
+      if (currentFilter !== 'all') params.append('status', currentFilter);
+      if (currentSearch) params.append('search', currentSearch);
+      const r = await fetch('/api/orders?' + params);
+      const d = await r.json();
+      totalPages = d.pages;
+      document.getElementById('order-count').textContent = d.total ? `(${d.total})` : '';
+      document.getElementById('page-info').textContent = `Page ${d.page} of ${d.pages || 1} · ${d.total} orders`;
+      document.getElementById('btn-prev').disabled = d.page <= 1;
+      document.getElementById('btn-next').disabled = d.page >= d.pages;
+
+      if (!d.orders.length) {
+        tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📭</div><p>No orders found</p></div></td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = d.orders.map(o => `
+        <tr onclick='openModal(${JSON.stringify(o).replace(/'/g,"&#39;")})'>
+          <td>
+            <div class="customer-name">${esc(o.customer?.name || '—')}</div>
+            <div class="customer-email">${esc(o.customer?.email || '')}</div>
+          </td>
+          <td><div class="invoice-code" title="${esc(o.invoice)}">${esc((o.invoice||'').slice(0,8))}…</div></td>
+          <td style="color:var(--muted);font-size:12px">${(o.items||[]).map(i=>i.name).join(', ') || '—'}</td>
+          <td><span class="amount">৳ ${(o.amount||0).toLocaleString()}</span></td>
+          <td><span class="badge ${o.status}"><span class="badge-dot"></span>${o.status}</span></td>
+          <td><span class="verified-icon">${o.verified ? '✅' : '❌'}</span></td>
+          <td><div class="date-str">${formatDate(o.createdAt)}</div></td>
+          <td onclick="event.stopPropagation()">
+            <div class="actions">
+              <button class="btn-action" onclick='openModal(${JSON.stringify(o).replace(/'/g,"&#39;")})'>View</button>
+              <button class="btn-action danger" onclick="deleteOrder('${o._id}')">Del</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--red);font-family:var(--mono)">Error: ${e.message}</td></tr>`; }
+  }
+
+  function openModal(order) {
+    selectedOrder = order;
+    const items = order.items || [];
+    document.getElementById('modal-body').innerHTML = `
+      <div class="detail-section">
+        <div class="detail-section-title">Customer</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="detail-item-label">Name</div><div class="detail-item-value">${esc(order.customer?.name||'—')}</div></div>
+          <div class="detail-item"><div class="detail-item-label">Email</div><div class="detail-item-value">${esc(order.customer?.email||'—')}</div></div>
+          <div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${esc(order.customer?.phone||'—')}</div></div>
+          <div class="detail-item"><div class="detail-item-label">Address</div><div class="detail-item-value">${esc(order.customer?.address||'—')}</div></div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">Order Info</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="detail-item-label">Invoice</div><div class="detail-item-value" style="font-family:var(--mono);font-size:11px">${esc(order.invoice||'—')}</div></div>
+          <div class="detail-item"><div class="detail-item-label">Amount</div><div class="detail-item-value" style="color:#a78bfa">৳ ${(order.amount||0).toLocaleString()}</div></div>
+          <div class="detail-item"><div class="detail-item-label">Status</div><div class="detail-item-value"><span class="badge ${order.status}"><span class="badge-dot"></span>${order.status}</span></div></div>
+          <div class="detail-item"><div class="detail-item-label">Verified</div><div class="detail-item-value">${order.verified ? '✅ Yes' : '❌ No'}</div></div>
+          <div class="detail-item" style="grid-column:1/-1"><div class="detail-item-label">Date</div><div class="detail-item-value">${formatDate(order.createdAt)}</div></div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">Items</div>
+        <table class="items-table">
+          <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+          <tbody>
+            ${items.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty}</td><td>৳ ${i.price}</td><td>৳ ${i.subtotal}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    document.getElementById('modal-actions').innerHTML = `
+      ${order.status !== 'paid' ? `<button class="btn btn-success" onclick="updateStatus('${order._id}','paid')">✅ Mark Paid</button>` : ''}
+      ${order.status !== 'failed' ? `<button class="btn btn-danger" onclick="updateStatus('${order._id}','failed')">❌ Mark Failed</button>` : ''}
+      ${order.status !== 'pending' ? `<button class="btn btn-ghost" onclick="updateStatus('${order._id}','pending')">⏳ Mark Pending</button>` : ''}
+      ${!order.verified ? `<button class="btn btn-primary" onclick="updateVerified('${order._id}',true)">🔒 Verify</button>` : `<button class="btn btn-ghost" onclick="updateVerified('${order._id}',false)">Unverify</button>`}
+      <button class="btn btn-danger" onclick="deleteOrder('${order._id}');closeModal()">🗑 Delete</button>
+    `;
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+  function closeModalOnBg(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
+
+  async function updateStatus(id, status) {
+    try {
+      await fetch('/api/orders/' + id, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status}) });
+      showToast('Status updated to ' + status, 'success');
+      closeModal(); loadOrders(); loadStats();
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  async function updateVerified(id, verified) {
+    try {
+      await fetch('/api/orders/' + id, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({verified}) });
+      showToast('Verification updated', 'success');
+      closeModal(); loadOrders();
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  async function deleteOrder(id) {
+    if (!confirm('Delete this order? This cannot be undone.')) return;
+    try {
+      await fetch('/api/orders/' + id, { method:'DELETE' });
+      showToast('Order deleted', 'success');
+      loadOrders(); loadStats();
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    currentPage = 1;
+    ['all','paid','failed','pending'].forEach(x => {
+      const el = document.getElementById('f-' + x);
+      el.classList.toggle('active', x === f);
+    });
+    loadOrders();
+  }
+
+  function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      currentSearch = document.getElementById('search-input').value;
+      currentPage = 1;
+      loadOrders();
+    }, 350);
+  }
+
+  function changePage(dir) {
+    currentPage = Math.max(1, Math.min(totalPages, currentPage + dir));
+    loadOrders();
+  }
+
+  function formatDate(d) {
+    if (!d) return '—';
+    const dt = new Date(d);
+    return dt.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' + dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showToast(msg, type='') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+</script>
+</body>
+</html>
